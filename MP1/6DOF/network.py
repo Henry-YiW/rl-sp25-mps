@@ -26,7 +26,7 @@ class SimpleModel(nn.Module):
         )
 
     def forward(self, image, bbox):
-        print(image.shape)
+        print(image.shape, bbox.shape)
         x = self.resnet(image)
         x = torch.cat((x, bbox), dim=1)
         x = self.head(x)
