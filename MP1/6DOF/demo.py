@@ -88,14 +88,14 @@ def main(_):
             dataloader_iter = iter(dataloader_train)
         image, bbox, cls_gt, R_gt, t_gt, key_name = next(dataloader_iter) 
 
-        # image = image[2].permute(1, 2, 0).cpu().numpy()
+        # image_to_show = image[2].permute(1, 2, 0).cpu().numpy()
     
         # # Normalize to [0,1] if needed
-        # if image.min() < 0:
-        #     image = (image - image.min()) / (image.max() - image.min())
+        # if image_to_show.min() < 0:
+        #     image_to_show = (image_to_show - image_to_show.min()) / (image_to_show.max() - image_to_show.min())
 
         # # Show image
-        # plt.imshow(image)
+        # plt.imshow(image_to_show)
         # plt.title(f'Input Image {i}')
         # plt.axis("off")
         # plt.show()
