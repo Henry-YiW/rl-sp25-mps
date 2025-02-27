@@ -65,10 +65,11 @@ class YCBVDataset(Dataset):
         Returns:
             torch.Tensor: Cropped image tensor of shape (B, C, h, w).
         """
-        x = int(bbox[0].item())
-        y = int(bbox[1].item())
-        w = int(bbox[2].item())
-        h = int(bbox[3].item())
+        x, y, w, h = bbox
+        x = int(x)
+        y = int(y)
+        w = int(w)
+        h = int(h)
         logging.error(f'x, y, w, h, {x}, {y}, {w}, {h}, bbox')
         return image_tensor[:, y:y+h, x:x+w]  # Keep batch & channels
         
