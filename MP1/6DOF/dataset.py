@@ -69,7 +69,7 @@ class YCBVDataset(Dataset):
         y = int(bbox[1].item())
         w = int(bbox[2].item())
         h = int(bbox[3].item())
-        logging.debug(x, y, w, h, 'bbox')
+        logging.error(f'x, y, w, h, {x}, {y}, {w}, {h}, bbox')
         return image_tensor[:, y:y+h, x:x+w]  # Keep batch & channels
         
     def pad_images_torchvision(cropped_image, target_size=(480, 640), pad_value=0):
@@ -85,7 +85,7 @@ class YCBVDataset(Dataset):
             torch.Tensor: Batched padded images of shape (B, C, target_H, target_W).
         """
 
-        logging.debug(target_size, 'target_size')
+        logging.error(f'target_size, {target_size}, cropped_image, {cropped_image.shape}')
         target_h, target_w = target_size
         h, w = cropped_image.shape  # Get original image size
 
