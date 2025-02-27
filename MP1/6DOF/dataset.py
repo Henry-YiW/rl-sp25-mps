@@ -88,7 +88,7 @@ class YCBVDataset(Dataset):
 
         logging.error(f'target_size, {target_size}, cropped_image, {cropped_image.shape}')
         target_h, target_w = target_size
-        h, w = cropped_image.shape  # Get original image size
+        c, h, w = cropped_image.shape  # Get original image size
 
         # Compute required padding
         pad_h = max(target_h - h, 0)
