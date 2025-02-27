@@ -28,9 +28,35 @@ flags.DEFINE_integer('save_every', 50000, 'Iterations interval to save model')
 flags.DEFINE_integer('preload_images', 1, 
     'Weather to preload train and val images at beginning of training.')
 flags.DEFINE_multi_integer('lr_step', [60000, 80000], 'Iterations to reduce learning rate')
+flags.DEFINE_boolean('use_6d', False, 'Use 6D rotation representation')
+flags.DEFINE_boolean('use_seperate_heads', False, 'Use seperate heads for rotation and translation')
 
 
 log_every = 20
+
+def geodesic_loss(R_pred, R_gt):
+    """
+    Computes geodesic loss (angular distance) between predicted and ground-truth rotation matrices.
+
+    Args:
+        R_pred (torch.Tensor): Predicted rotation matrices, shape (batch_size, 3, 3).
+        R_gt (torch.Tensor): Ground-truth rotation matrices, shape (batch_size, 3, 3).
+
+    Returns:
+        torch.Tensor: Scalar geodesic loss.
+    """
+
+    # Compute relative rotation matrix
+    R_diff = R_gt.permute(0, 2, 1) @ R_pred  # R_gt^T * R_pred
+
+    # Compute trace of R_diff
+    trace = torch.diagonal(R_diff, dim1=-2, dim2=-1).sum(dim=-1)
+
+    # Compute the rotation angle (clamped for numerical stability)
+    theta = torch.acos(torch.clamp((trace - 1) / 2, -1 + 1e-7, 1 - 1e-7))
+
+    # Return mean loss over the batch
+    return theta.mean()
 
 
 def main(_):
@@ -56,7 +82,7 @@ def main(_):
     
     num_classes = dataset_train.num_classes
     device = torch.device('cuda:0')
-    model = SimpleModel(num_classes=num_classes)
+    model = SimpleModel(num_classes=num_classes, use_6d=FLAGS.use_6d, use_seperate_heads=FLAGS.use_seperate_heads)
     model.to(device)
 
     writer = SummaryWriter(FLAGS.output_dir, max_queue=1000, flush_secs=120)
@@ -107,6 +133,10 @@ def main(_):
         
         # Compute metrics
         cls_pred, R_pred, t_pred = model.process_output((logits, R, t))
+        cls_index = cls_pred * model.dimension_rotation
+        if FLAGS.use_seperate_heads:
+            R_pred = R_pred[:, cls_index:cls_index + model.dimension_rotation, :]
+            t_pred = t_pred[:, cls_index:cls_index + 3, :]
         metrics = get_metrics(
             cls=cls_pred, R=R_pred, t=t_pred, 
             gt_cls=cls_gt, gt_R=R_gt, gt_t=t_gt)        
@@ -115,9 +145,23 @@ def main(_):
 
         # Loss functions for training
         classification_loss = nn.CrossEntropyLoss()(logits, cls_gt)
-        R_loss = nn.MSELoss()(R, R_gt.reshape(-1, 9))
-        t_loss = nn.MSELoss()(t, t_gt.reshape(-1, 3))
 
+        if FLAGS.use_seperate_heads:
+            if cls_pred == cls_gt:
+                if FLAGS.use_6d:
+                    R_loss = geodesic_loss(R, R_gt.reshape(-1, 3, 3))
+                else:
+                    R_loss = nn.MSELoss()(R, R_gt.reshape(-1, 9))
+                t_loss = nn.MSELoss()(t, t_gt.reshape(-1, 3))
+            
+        else:
+            if FLAGS.use_6d:
+                R_loss = geodesic_loss(R, R_gt.reshape(-1, 3, 3))
+            else:
+                R_loss = nn.MSELoss()(R, R_gt.reshape(-1, 9))
+            t_loss = nn.MSELoss()(t, t_gt.reshape(-1, 3))
+
+        logging.info(f'classification_loss_shape: {classification_loss.shape}, R_loss_shape: {R_loss.shape}, t_loss_shape: {t_loss.shape}')
         classification_loss = classification_loss.mean()
         R_loss = R_loss.mean()
         t_loss = t_loss.mean()
