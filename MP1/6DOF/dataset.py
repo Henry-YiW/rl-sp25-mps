@@ -73,7 +73,7 @@ class YCBVDataset(Dataset):
         logging.error(f'x, y, w, h, {x}, {y}, {w}, {h}, bbox')
         return image_tensor[:, y:y+h, x:x+w]  # Keep batch & channels
         
-    def pad_images_torchvision(cropped_image, target_size=(480, 640), pad_value=0):
+    def pad_images_torchvision(self, cropped_image, target_size=(480, 640), pad_value=0):
         """
         Pads images to a fixed size without distorting aspect ratio using torchvision.transforms.Pad.
 
