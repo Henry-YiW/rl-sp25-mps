@@ -14,6 +14,7 @@ from utils import test, get_metrics, logger, setup_logging
 
 import matplotlib.pyplot as plt
 
+# sys.argv = [sys.argv[0]]
 
 FLAGS = flags.FLAGS
 flags.DEFINE_float('lr', 1e-4, 'Learning Rate')
