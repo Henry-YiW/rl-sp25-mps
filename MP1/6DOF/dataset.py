@@ -86,7 +86,7 @@ class YCBVDataset(Dataset):
             torch.Tensor: Batched padded images of shape (B, C, target_H, target_W).
         """
 
-        logging.error(f'target_size, {target_size}, cropped_image, {cropped_image.shape}')
+        logging.error(f'target_size, {target_size}')
         target_h, target_w = target_size
         h, w = cropped_image.shape  # Get original image size
 
