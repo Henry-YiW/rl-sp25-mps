@@ -100,7 +100,7 @@ class YCBVDataset(Dataset):
 
         return padded_img  # Convert list to batch tensor
 
-    def __getitem__(self, idx, crop=False):
+    def __getitem__(self, idx, crop=True):
         item = self.data[idx].copy()
         obj_class = item['obj_id']
         R = torch.tensor(item['cam_R_m2c'], dtype=torch.float32).reshape(3, 3)
