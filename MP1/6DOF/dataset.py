@@ -66,7 +66,7 @@ class YCBVDataset(Dataset):
             torch.Tensor: Cropped image tensor of shape (B, C, h, w).
         """
         x, y, w, h = bbox  # Bounding box (x, y, width, height)
-        print(x, y, w, h, 'bbox')
+        print(bbox, 'bbox')
         return image_tensor[:, y:y+h, x:x+w]  # Keep batch & channels
         
     def pad_images_torchvision(cropped_image, target_size=(480, 640), pad_value=0):
