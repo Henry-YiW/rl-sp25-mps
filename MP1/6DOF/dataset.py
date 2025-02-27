@@ -69,7 +69,7 @@ class YCBVDataset(Dataset):
         y = int(bbox[1].item())
         w = int(bbox[2].item())
         h = int(bbox[3].item())
-        print(x, y, w, h, 'bbox')
+        logging.debug(x, y, w, h, 'bbox')
         return image_tensor[:, y:y+h, x:x+w]  # Keep batch & channels
         
     def pad_images_torchvision(cropped_image, target_size=(480, 640), pad_value=0):
