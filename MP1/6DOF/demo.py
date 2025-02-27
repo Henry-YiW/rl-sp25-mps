@@ -165,7 +165,7 @@ def main(_):
                 R_loss = nn.MSELoss()(R, R_gt.reshape(-1, 9))
             t_loss = nn.MSELoss()(t, t_gt.reshape(-1, 3))
 
-        logging.info(f'classification_loss_shape: {classification_loss.shape}, R_loss_shape: {R_loss.shape}, t_loss_shape: {t_loss.shape}')
+        # logging.info(f'classification_loss_shape: {classification_loss.shape}, R_loss_shape: {R_loss.shape}, t_loss_shape: {t_loss.shape}')
         classification_loss = classification_loss.mean()
         R_loss = R_loss.mean()
         t_loss = t_loss.mean()
