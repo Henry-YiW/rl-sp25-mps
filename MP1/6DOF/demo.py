@@ -30,7 +30,7 @@ flags.DEFINE_integer('preload_images', 1,
 flags.DEFINE_multi_integer('lr_step', [60000, 80000], 'Iterations to reduce learning rate')
 flags.DEFINE_boolean('use_6d', False, 'Use 6D rotation representation')
 flags.DEFINE_boolean('use_seperate_heads', False, 'Use seperate heads for rotation and translation')
-
+flags.DEFINE_boolean('cropping', False, 'Crop images')
 
 log_every = 20
 
@@ -70,13 +70,16 @@ def main(_):
                                                          std=[0.229, 0.224, 0.225]),])
     dataset_train = YCBVDataset(split='train', transform=transform,
                                 data_dir=FLAGS.data_dir, 
-                                preload_images=FLAGS.preload_images)
+                                preload_images=FLAGS.preload_images,
+                                cropping=FLAGS.cropping)
     dataset_val = YCBVDataset(split='val', transform=transform, 
                               data_dir=FLAGS.data_dir, 
-                              preload_images=FLAGS.preload_images)
+                              preload_images=FLAGS.preload_images,
+                              cropping=FLAGS.cropping)
     dataset_test = YCBVDataset(split='test', transform=transform,
                                data_dir=FLAGS.data_dir,
-                               preload_images=FLAGS.preload_images)
+                               preload_images=FLAGS.preload_images,
+                               cropping=FLAGS.cropping)
     dataloader_train = DataLoader(dataset_train, batch_size=FLAGS.batch_size,
                                   num_workers=2, shuffle=True, drop_last=True)
     
