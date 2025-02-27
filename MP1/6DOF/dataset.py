@@ -55,57 +55,32 @@ class YCBVDataset(Dataset):
         return os.path.join(self.data_dir, 'rgb', img_name)
 
     def crop_batched_tensor(self,image_tensor, bbox):
-        """
-        Crops a batched image tensor based on the bounding box.
-
-        Args:
-            image_tensor (torch.Tensor): Image tensor of shape (B, C, H, W).
-            bbox (tuple): Bounding box as (x, y, width, height).
-
-        Returns:
-            torch.Tensor: Cropped image tensor of shape (B, C, h, w).
-        """
         x, y, w, h = bbox
         x = int(x)
         y = int(y)
         w = int(w)
         h = int(h)
         # logging.error(f'x, y, w, h, {x}, {y}, {w}, {h}, bbox')
-        return image_tensor[:, y:y+h, x:x+w]  # Keep batch & channels
+        return image_tensor[:, y:y+h, x:x+w]
         
     def pad_images_torchvision(self, cropped_image, target_size=(480, 640), pad_value=0):
-        """
-        Pads images to a fixed size without distorting aspect ratio using torchvision.transforms.Pad.
-
-        Args:
-            cropped_images (list of torch.Tensor): List of cropped images (C, H, W).
-            target_size (tuple): Desired (H, W) after padding.
-            pad_value (int): Padding color (0 for black, 255 for white).
-
-        Returns:
-            torch.Tensor: Batched padded images of shape (B, C, target_H, target_W).
-        """
 
         # logging.error(f'target_size, {target_size}, cropped_image, {cropped_image.shape}')
         target_h, target_w = target_size
-        c, h, w = cropped_image.shape  # Get original image size
+        c, h, w = cropped_image.shape
 
-        # Compute required padding
         pad_h = max(target_h - h, 0)
         pad_w = max(target_w - w, 0)
 
-        # Compute symmetric padding (left, right, top, bottom)
         pad_left = pad_w // 2
         pad_right = pad_w - pad_left
         pad_top = pad_h // 2
         pad_bottom = pad_h - pad_top
 
-        # Apply padding
         pad_transform = transforms.Pad((pad_left, pad_top, pad_right, pad_bottom), fill=pad_value)
-        padded_img = pad_transform(cropped_image)  # Apply padding transformation
+        padded_img = pad_transform(cropped_image)
 
-
-        return padded_img  # Convert list to batch tensor
+        return padded_img
 
     def __getitem__(self, idx, crop=True):
         item = self.data[idx].copy()
