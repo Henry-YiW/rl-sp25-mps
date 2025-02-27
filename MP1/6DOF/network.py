@@ -41,9 +41,9 @@ class SimpleModel(nn.Module):
         return image_tensor[:, :, y:y+h, x:x+w]  # Keep batch & channels
 
     def forward(self, image, bbox):
-        print(image.shape, bbox.shape)
+        # print(image.shape, bbox.shape)
         # image = self.crop_batched_tensor(image, bbox)
-        print(image.shape)
+        # print(image.shape)
         x = self.resnet(image)
         x = torch.cat((x, bbox), dim=1)
         x = self.head(x)
