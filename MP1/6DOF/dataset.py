@@ -14,7 +14,7 @@ FLAGS = flags.FLAGS
 
 class YCBVDataset(Dataset):
     def __init__(self, data_dir='./data/ycbv/v1/', split='train', transform=None, 
-                 preload_images=False):
+                 preload_images=False, cropping=False):
         self.data_dir = data_dir
         self.split = split
         self.transform = transform
@@ -25,6 +25,7 @@ class YCBVDataset(Dataset):
         self.data = list(self.data.values())
         self.num_classes = 13
         self.preload_images = preload_images
+        self.cropping = cropping
         if self.preload_images:
             self._preload_images()
 
@@ -82,7 +83,7 @@ class YCBVDataset(Dataset):
 
         return padded_img
 
-    def __getitem__(self, idx, crop=True):
+    def __getitem__(self, idx):
         item = self.data[idx].copy()
         obj_class = item['obj_id']
         R = torch.tensor(item['cam_R_m2c'], dtype=torch.float32).reshape(3, 3)
@@ -92,7 +93,7 @@ class YCBVDataset(Dataset):
         if self.transform:
             img = self.transform(img)
         original_size = img.shape[1:]
-        if crop:
+        if self.cropping:
             img = self.crop_batched_tensor(img, bbox)
             img = self.pad_images_torchvision(img, original_size)
         return img, bbox, obj_class, R, t, item['key_name']

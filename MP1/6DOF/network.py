@@ -8,37 +8,29 @@ FLAGS = flags.FLAGS
 
 
 class SimpleModel(nn.Module):
-    def __init__(self, num_classes, use_6d=False, use_seperate_heads=False):
+    def __init__(self, num_classes, use_6d=False, use_seperate_heads=False, cropping=False):
         super(SimpleModel, self).__init__()
         self.resnet = models.resnet18(weights='IMAGENET1K_V1')
         self.resnet.fc = nn.Identity()
         self.num_classes = num_classes
+        self.cropping = cropping
         if use_6d:
             self.dimension_rotation = 6
         else:
             self.dimension_rotation = 9
 
         self.one = 1
-        if not use_seperate_heads:
-            self.head = nn.Sequential(
-                nn.Linear(512 + 4, 256),
-                nn.ReLU(),
-                nn.Linear(256, 256),
-                nn.ReLU(),
-                nn.Linear(256, 256),
-                nn.ReLU(),
-                nn.Linear(256, self.num_classes + self.dimension_rotation + 3)
-            )
-        else:
+        
+        if use_seperate_heads:
             self.one = self.num_classes
-            self.head = nn.Sequential(
+        self.head = nn.Sequential(
                 nn.Linear(512 + 4, 256),
                 nn.ReLU(),
                 nn.Linear(256, 256),
                 nn.ReLU(),
                 nn.Linear(256, 256),
                 nn.ReLU(),
-                nn.Linear(256, self.num_classes + self.num_classes * (self.dimension_rotation + 3))
+                nn.Linear(256, self.num_classes + self.one * (self.dimension_rotation + 3))
             )
 
     def forward(self, image, bbox):
