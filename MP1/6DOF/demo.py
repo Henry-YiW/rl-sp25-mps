@@ -32,7 +32,7 @@ log_every = 20
 
 
 def main(_):
-    setup_logging()
+    setup_logging(FLAGS.output_dir)
     torch.set_num_threads(4)
     torch.manual_seed(FLAGS.seed)
     # set_seed(FLAGS.seed)

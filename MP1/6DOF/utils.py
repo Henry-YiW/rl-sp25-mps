@@ -2,16 +2,26 @@ import torch
 import json
 import logging
 import numpy as np
+import os
 
-def setup_logging():
+def setup_logging(logging_folder):
+    # Ensure the logging folder exists
+    os.makedirs(logging_folder, exist_ok=True)
+    
     log_formatter = logging.Formatter(
         '%(asctime)s: %(levelname)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
+
+    log_file = os.path.join(logging_folder, "output_log.txt")
+    file_handler = logging.FileHandler(log_file, mode='w')
+    file_handler.setFormatter(log_formatter)  # Apply formatter
+
     logging.getLogger().handlers = []
     if not len(logging.getLogger().handlers): 
         logging.getLogger().addHandler(console_handler)
+        logging.getLogger().addHandler(file_handler)
     logging.getLogger().setLevel(logging.INFO)
 
 def logger(tag, value, global_step):
