@@ -25,8 +25,25 @@ class SimpleModel(nn.Module):
             nn.Linear(256, num_outputs)
         )
 
+    def crop_batched_tensor(image_tensor, bbox):
+        """
+        Crops a batched image tensor based on the bounding box.
+
+        Args:
+            image_tensor (torch.Tensor): Image tensor of shape (B, C, H, W).
+            bbox (tuple): Bounding box as (x, y, width, height).
+
+        Returns:
+            torch.Tensor: Cropped image tensor of shape (B, C, h, w).
+        """
+        x, y, w, h = bbox  # Bounding box (x, y, width, height)
+    
+        return image_tensor[:, :, y:y+h, x:x+w]  # Keep batch & channels
+
     def forward(self, image, bbox):
         print(image.shape, bbox.shape)
+        image = self.crop_batched_tensor(image, bbox)
+        print(image.shape)
         x = self.resnet(image)
         x = torch.cat((x, bbox), dim=1)
         x = self.head(x)
