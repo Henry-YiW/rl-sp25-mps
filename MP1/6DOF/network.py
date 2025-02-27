@@ -42,7 +42,7 @@ class SimpleModel(nn.Module):
 
     def forward(self, image, bbox):
         print(image.shape, bbox.shape)
-        image = self.crop_batched_tensor(image, bbox)
+        # image = self.crop_batched_tensor(image, bbox)
         print(image.shape)
         x = self.resnet(image)
         x = torch.cat((x, bbox), dim=1)
