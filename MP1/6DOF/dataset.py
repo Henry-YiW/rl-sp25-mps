@@ -54,7 +54,53 @@ class YCBVDataset(Dataset):
         img_name = self.data[idx]['img_name']
         return os.path.join(self.data_dir, 'rgb', img_name)
 
-    def __getitem__(self, idx):
+    def crop_batched_tensor(self,image_tensor, bbox):
+        """
+        Crops a batched image tensor based on the bounding box.
+
+        Args:
+            image_tensor (torch.Tensor): Image tensor of shape (B, C, H, W).
+            bbox (tuple): Bounding box as (x, y, width, height).
+
+        Returns:
+            torch.Tensor: Cropped image tensor of shape (B, C, h, w).
+        """
+        x, y, w, h = bbox  # Bounding box (x, y, width, height)
+        return image_tensor[:, y:y+h, x:x+w]  # Keep batch & channels
+        
+    def pad_images_torchvision(cropped_image, target_size=(480, 640), pad_value=0):
+        """
+        Pads images to a fixed size without distorting aspect ratio using torchvision.transforms.Pad.
+
+        Args:
+            cropped_images (list of torch.Tensor): List of cropped images (C, H, W).
+            target_size (tuple): Desired (H, W) after padding.
+            pad_value (int): Padding color (0 for black, 255 for white).
+
+        Returns:
+            torch.Tensor: Batched padded images of shape (B, C, target_H, target_W).
+        """
+        target_h, target_w = target_size
+        h, w = cropped_image.shape  # Get original image size
+
+        # Compute required padding
+        pad_h = max(target_h - h, 0)
+        pad_w = max(target_w - w, 0)
+
+        # Compute symmetric padding (left, right, top, bottom)
+        pad_left = pad_w // 2
+        pad_right = pad_w - pad_left
+        pad_top = pad_h // 2
+        pad_bottom = pad_h - pad_top
+
+        # Apply padding
+        pad_transform = transforms.Pad((pad_left, pad_top, pad_right, pad_bottom), fill=pad_value)
+        padded_img = pad_transform(cropped_image)  # Apply padding transformation
+
+
+        return padded_img  # Convert list to batch tensor
+
+    def __getitem__(self, idx, crop=False):
         item = self.data[idx].copy()
         obj_class = item['obj_id']
         R = torch.tensor(item['cam_R_m2c'], dtype=torch.float32).reshape(3, 3)
@@ -63,6 +109,10 @@ class YCBVDataset(Dataset):
         bbox = torch.tensor(item['bbox_visib'], dtype=torch.float32).reshape(4)
         if self.transform:
             img = self.transform(img)
+        original_size = img.shape[1:]
+        if crop:
+            img = self.crop_batched_tensor(img, bbox)
+            img = self.pad_images_torchvision(img, original_size)
         return img, bbox, obj_class, R, t, item['key_name']
 
 
