@@ -25,7 +25,7 @@ class SimpleModel(nn.Module):
             nn.Linear(256, num_outputs)
         )
 
-    def crop_batched_tensor(image_tensor, bbox):
+    def crop_batched_tensor(self,image_tensor, bbox):
         """
         Crops a batched image tensor based on the bounding box.
 
