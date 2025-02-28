@@ -82,7 +82,8 @@ class SimpleModel(nn.Module):
             logits, R, t = outs 
             cls = logits.argmax(dim=1)
             if self.use_seperate_heads:
-                R, t = extract_rotation_translation_matrices(cls, R, t, self.dimension_rotation, 3)
+                # logging.info(f'cls: {cls.shape}, R: {R.shape}, t: {t.shape}, dimension_rotation: {self.dimension_rotation}')
+                R, t = extract_rotation_translation_matrices(cls, R, t, 9, 3)
             if not self.use_6d:
                 R = make_rotation_matrix(R.reshape(-1, 3, 3))
             t = t.reshape(-1, 3, 1)
