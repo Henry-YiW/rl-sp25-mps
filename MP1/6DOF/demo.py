@@ -137,7 +137,6 @@ def main(_):
         
         # Compute metrics
         cls_pred, R_pred, t_pred = model.process_output((logits, R, t))
-        cls_index = cls_pred * model.dimension_rotation
         if FLAGS.use_seperate_heads:
             R, t = extract_rotation_translation_matrices(cls_pred, R, t, model.dimension_rotation, 3)
         metrics = get_metrics(
