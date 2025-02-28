@@ -137,8 +137,8 @@ def main(_):
         
         # Compute metrics
         cls_pred, R_pred, t_pred = model.process_output((logits, R, t))
-        if FLAGS.use_seperate_heads:
-            R, t = extract_rotation_translation_matrices(cls_pred, R, t, 9, 3)
+        # if FLAGS.use_seperate_heads:
+        #     R, t = extract_rotation_translation_matrices(cls_pred, R, t, 9, 3)
         metrics = get_metrics(
             cls=cls_pred, R=R_pred, t=t_pred, 
             gt_cls=cls_gt, gt_R=R_gt, gt_t=t_gt)        

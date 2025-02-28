@@ -42,6 +42,8 @@ class SimpleModel(nn.Module):
         x = torch.cat((x, bbox), dim=1)
         x = self.head(x)
         logits, R, t = torch.split(x, [self.num_classes, self.dimension_rotation*self.one, 3*self.one], dim=1)
+        cls = logits.argmax(dim=1).detach()
+        R, t = extract_rotation_translation_matrices(cls, R, t, self.dimension_rotation, 3)
         if self.use_6d:
             R = self.rotation_6d_to_matrix(R.reshape(-1, 6))
             R = R.reshape(-1, 3 * 3)
@@ -81,9 +83,6 @@ class SimpleModel(nn.Module):
         with torch.no_grad():
             logits, R, t = outs 
             cls = logits.argmax(dim=1)
-            if self.use_seperate_heads:
-                # logging.info(f'cls: {cls.shape}, R: {R.shape}, t: {t.shape}, dimension_rotation: {self.dimension_rotation}')
-                R, t = extract_rotation_translation_matrices(cls, R, t, 9, 3)
             if not self.use_6d:
                 R = make_rotation_matrix(R.reshape(-1, 3, 3))
             t = t.reshape(-1, 3, 1)
