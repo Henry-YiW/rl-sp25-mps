@@ -152,6 +152,8 @@ def main(_):
             logic_mask = cls_pred == cls_gt
             R = R[logic_mask]
             t = t[logic_mask]
+            R_gt = R_gt[logic_mask]
+            t_gt = t_gt[logic_mask]
 
         if FLAGS.use_6d:
             R_loss = geodesic_loss(R.reshape(-1, 3, 3), R_gt.reshape(-1, 3, 3))
