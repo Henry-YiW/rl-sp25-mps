@@ -73,7 +73,7 @@ class SimpleModel(nn.Module):
 
         # Stack into a valid 3×3 rotation matrix
         R = torch.stack((r1, r2, r3), dim=2)  # Shape: (batch_size, 3, 3)
-        logging.info(f'R: {R.shape}')
+        # logging.info(f'R: {R.shape}')
         return R
 
 
