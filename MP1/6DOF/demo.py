@@ -119,7 +119,10 @@ def main(_):
         image, bbox, cls_gt, R_gt, t_gt, key_name = next(dataloader_iter) 
 
         # image_to_show = image[2].permute(1, 2, 0).cpu().numpy()
-    
+        
+        # if image_to_show.min() < 0:
+        #     image_to_show = (image_to_show - image_to_show.min()) / (image_to_show.max() - image_to_show.min())
+
         # # Show image
         # plt.imshow(image_to_show)
         # plt.title(f'Input Image {i}')
