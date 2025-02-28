@@ -166,9 +166,9 @@ def main(_):
         t_loss = t_loss.mean()
 
         total_loss = classification_loss
-        if not np.isnan(R_loss):
+        if not torch.isnan(R_loss):
           total_loss += R_loss
-        if not np.isnan(t_loss):
+        if not torch.isnan(t_loss):
           total_loss += t_loss
         
                 
