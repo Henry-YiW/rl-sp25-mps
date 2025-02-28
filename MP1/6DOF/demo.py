@@ -164,7 +164,12 @@ def main(_):
         classification_loss = classification_loss.mean()
         R_loss = R_loss.mean()
         t_loss = t_loss.mean()
-        total_loss = classification_loss + R_loss + t_loss
+
+        total_loss = classification_loss
+        if not np.isnan(R_loss):
+          total_loss += R_loss
+        if not np.isnan(t_loss):
+          total_loss += t_loss
         
                 
         if np.isnan(total_loss.item()):
