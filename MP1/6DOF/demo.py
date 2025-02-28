@@ -10,7 +10,7 @@ import time
 import sys
 from dataset import YCBVDataset
 from network import SimpleModel
-from utils import test, get_metrics, logger, setup_logging
+from utils import test, get_metrics, logger, setup_logging, extract_rotation_translation_matrices
 
 import matplotlib.pyplot as plt
 
@@ -139,8 +139,7 @@ def main(_):
         cls_pred, R_pred, t_pred = model.process_output((logits, R, t))
         cls_index = cls_pred * model.dimension_rotation
         if FLAGS.use_seperate_heads:
-            R_pred = R_pred[:, cls_index:cls_index + model.dimension_rotation, :]
-            t_pred = t_pred[:, cls_index:cls_index + 3, :]
+            R, t = extract_rotation_translation_matrices(cls_pred, R, t, model.dimension_rotation, 3)
         metrics = get_metrics(
             cls=cls_pred, R=R_pred, t=t_pred, 
             gt_cls=cls_gt, gt_R=R_gt, gt_t=t_gt)        

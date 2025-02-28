@@ -50,6 +50,22 @@ def make_rotation_matrix(R_in):
         S[neg_idx, -1] *= -1
         R_out = U @ torch.diag_embed(S) @ Vh
         return R_out
+    
+def extract_rotation_translation_matrices(cls_pred, R_pred, t_pred, dimension_rotation, dimension_translation):
+    cls_index = cls_pred.long()
+    batch_size = R_pred.shape[0]
+    rot_start = cls_index * dimension_rotation
+    trans_start = cls_index * dimension_translation
+
+    R_indexing = torch.stack([torch.arange(rot_start[i], rot_start[i] + dimension_rotation) for i in range(batch_size)])
+    t_indexing = torch.stack([torch.arange(trans_start[i], trans_start[i] + dimension_translation) for i in range(batch_size)])
+
+    R_extracted = R_pred[torch.arange(batch_size)[:, None], R_indexing]
+    t_extracted = t_pred[torch.arange(batch_size)[:, None], t_indexing]
+
+    return R_extracted, t_extracted
+        
+        
      
 def get_metrics(cls, R, t, gt_cls, gt_R, gt_t, R_thresh=0.5, t_thresh=0.1):
     cls_accuracy = torch.mean((cls == gt_cls).float())

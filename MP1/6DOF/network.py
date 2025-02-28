@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision import models
-from utils import make_rotation_matrix
+from utils import make_rotation_matrix, extract_rotation_translation_matrices
 import torch.nn.functional as F
 from absl import flags
 import logging
@@ -81,6 +81,8 @@ class SimpleModel(nn.Module):
         with torch.no_grad():
             logits, R, t = outs 
             cls = logits.argmax(dim=1)
+            if self.use_seperate_heads:
+                R, t = extract_rotation_translation_matrices(cls, R, t, self.dimension_rotation, 3)
             if not self.use_6d:
                 R = make_rotation_matrix(R.reshape(-1, 3, 3))
             t = t.reshape(-1, 3, 1)
