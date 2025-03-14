@@ -50,7 +50,7 @@ def main(_):
     device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
     
     state_dim, action_dim = get_dims(FLAGS.env_name)
-    
+    print(action_dim)
     if FLAGS.algo == 'dqn':
         n_models = 1
         models, targets = [], []

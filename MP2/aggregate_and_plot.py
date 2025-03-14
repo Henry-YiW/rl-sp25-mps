@@ -28,9 +28,9 @@ def main(_):
             logdir_ = logdir_ / 'val'
             event_acc = EventAccumulator(str(logdir_))
             event_acc.Reload()
-            print('event_acc.Scalars',event_acc.Scalars('val-mean_reward'))
+            # print('event_acc.Scalars',event_acc.Scalars('val-mean_reward'))
             processed_scalars_event = [ [event.wall_time, event.step, event.value] for event in event_acc.Scalars('val-mean_reward') ]
-            print('processed_scalars_event',processed_scalars_event)
+            # print('processed_scalars_event',processed_scalars_event)
             _, step_nums, vals = zip(*processed_scalars_event)
             samples.append(step_nums)
             rewards.append(vals)

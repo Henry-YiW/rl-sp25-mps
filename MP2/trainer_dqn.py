@@ -33,17 +33,15 @@ class ReplayBuffer(object):
         self.state_dim = state_dim
         self.action_dim = action_dim
         
-        # Initialize buffer arrays
         self.states = torch.zeros((size, state_dim), dtype=torch.float32)
         self.actions = torch.zeros((size, 1), dtype=torch.long)
         self.rewards = torch.zeros(size, dtype=torch.float32)
         self.next_states = torch.zeros((size, state_dim), dtype=torch.float32)
         
-        self.insert_position = 0  # Points to the next slot to insert data
-        self.current_size = 0  # Tracks the current size of the buffer
+        self.insert_position = 0
+        self.current_size = 0
 
     def insert(self, rollouts):
-        # Iterate through the rollouts and insert them into the buffer
         states_batch, actions_batch, rewards_batch, next_states_batch = rollouts
         for states, actions, rewards, next_states in zip(states_batch, actions_batch, rewards_batch, next_states_batch):
             for state, action, reward, next_state in zip(states, actions, rewards, next_states):
@@ -52,12 +50,10 @@ class ReplayBuffer(object):
                 self.rewards[self.insert_position] = reward
                 self.next_states[self.insert_position] = next_state
                 
-                # Update pointer and size
                 self.insert_position = (self.insert_position + 1) % self.size
                 self.current_size = min(self.current_size + 1, self.size)
 
     def sample_batch(self, batch_size):
-        # Sample batch_size indices from the buffer
         indices = torch.randint(0, self.current_size, size=(batch_size,))
         # print('self.states', self.states.shape)
         # print('self.actions', self.actions.shape)
@@ -71,6 +67,77 @@ class ReplayBuffer(object):
         
         return (states, actions, rewards, next_states)
 
+
+class PrioritizedReplayBuffer(object):
+    def __init__(self, size, state_dim, action_dim, alpha=0.6, beta_start=0.4, beta_frames=100000):
+        self.size = size
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.alpha = alpha
+        self.beta_start = beta_start
+        self.beta_frames = beta_frames
+        self.frame_count = 0
+        
+        self.states = torch.zeros((size, state_dim), dtype=torch.float32)
+        self.actions = torch.zeros((size, 1), dtype=torch.long)
+        self.rewards = torch.zeros(size, dtype=torch.float32)
+        self.next_states = torch.zeros((size, state_dim), dtype=torch.float32)
+        
+        self.priorities = torch.zeros(size, dtype=torch.float32)
+        
+        self.insert_position = 0
+        self.current_size = 0
+        
+        self.eps = 1e-5
+        self.max_priority = 1.0
+
+    def insert(self, rollouts):
+        states_batch, actions_batch, rewards_batch, next_states_batch = rollouts
+        for states, actions, rewards, next_states in zip(states_batch, actions_batch, rewards_batch, next_states_batch):
+            for state, action, reward, next_state in zip(states, actions, rewards, next_states):
+                self.states[self.insert_position] = state
+                self.actions[self.insert_position] = action
+                self.rewards[self.insert_position] = reward
+                self.next_states[self.insert_position] = next_state
+                
+                self.priorities[self.insert_position] = self.max_priority
+                
+                self.insert_position = (self.insert_position + 1) % self.size
+                self.current_size = min(self.current_size + 1, self.size)
+
+    def sample_batch(self, batch_size):
+        beta = min(1.0, self.beta_start + (1.0 - self.beta_start) * (self.frame_count / self.beta_frames))
+        self.frame_count += 1
+        
+        if self.current_size < batch_size:
+            batch_size = self.current_size
+        
+        if self.current_size == self.size:
+            priorities = self.priorities
+        else:
+            priorities = self.priorities[:self.current_size]
+        
+        probs = priorities.pow(self.alpha)
+        probs = probs / probs.sum()
+        
+        indices = torch.multinomial(probs, batch_size, replacement=False)
+        
+        weights = (self.current_size * probs[indices]).pow(-beta)
+        weights = weights / weights.max()
+        
+        states = self.states[indices]
+        actions = self.actions[indices]
+        rewards = self.rewards[indices]
+        next_states = self.next_states[indices]
+        
+        return states, actions, rewards, next_states, indices, weights
+    
+    def update_priorities(self, indices, td_errors):
+        for idx, td_error in zip(indices, td_errors):
+            self.priorities[idx] = abs(td_error) + self.eps
+            
+            self.max_priority = max(self.max_priority, self.priorities[idx].item())
+
 # Starting off from states in envs, rolls out num_steps_per_rollout for each
 # environment using the policy in `model`. Returns rollouts in the form of
 # states, actions, rewards and new states. Also returns the state the
@@ -78,14 +145,12 @@ class ReplayBuffer(object):
 def collect_rollouts(models, envs, states, num_steps_per_rollout, epsilon, device):
     # print('states', states)
     states_tensor = torch.FloatTensor(states).to(device)
-    # Roll out num_steps_per_rollout steps
     states_batch = []
     actions_batch = []
     rewards_batch = []
     next_states_batch = []
     for step in range(num_steps_per_rollout):
         states_batch.append(states_tensor)
-        # Get action using epsilon-greedy policy
         with torch.no_grad():
             actions = models[0].act(states_tensor, epsilon=epsilon).cpu().numpy()
         # print('actions', actions)
@@ -115,53 +180,156 @@ def update_model(replay_buffer, models, targets, optim, gamma, action_dim,
     total_bellman_error = 0.0
     device = next(models[0].parameters()).device
     
-    # Check if we have enough samples in the buffer
     if replay_buffer.current_size < q_batch_size:
         return total_bellman_error
     
-    # Perform q_num_steps updates
     for _ in range(q_num_steps):
-        # Sample a batch from the replay buffer
         states, actions, rewards, next_states = replay_buffer.sample_batch(q_batch_size)
         states = states.to(device)
         actions = actions.to(device)
         rewards = rewards.to(device)
         next_states = next_states.to(device)
         # print(states.shape, actions.shape, rewards.shape, next_states.shape)
-        # Compute Q-values for current states and actions
         current_q_values = models[0](states).gather(1, actions).squeeze(-1)
         # print('actions', actions)
         
-        # Compute target Q-values
+
         with torch.no_grad():
-            # Get the maximum Q-value across all actions for the next states
             next_q_values = targets[0](next_states).max(dim=1)[0]
             
-            # Compute the target Q-value using the Bellman equation
             target_q_values = rewards + gamma * next_q_values
         
-        # Compute the loss (MSE between current and target Q-values)
         loss = F.mse_loss(current_q_values, target_q_values)
         
-        # Optimize the model
         optim.zero_grad()
         loss.backward()
         optim.step()
         
-        # Accumulate the bellman error for reporting
         total_bellman_error += loss.item()
     
-    # Return the average bellman error
+    return total_bellman_error / q_num_steps
+
+def update_model_double_dqn(replay_buffer, models, targets, optim, gamma, action_dim, 
+                 q_batch_size, q_num_steps):
+    total_bellman_error = 0.0
+    device = next(models[0].parameters()).device
+    
+    if replay_buffer.current_size < q_batch_size:
+        return total_bellman_error
+    
+    for _ in range(q_num_steps):
+        states, actions, rewards, next_states = replay_buffer.sample_batch(q_batch_size)
+        states = states.to(device)
+        actions = actions.to(device)
+        rewards = rewards.to(device)
+        next_states = next_states.to(device)
+        
+        current_q_values = models[0](states).gather(1, actions).squeeze(-1)
+        
+        with torch.no_grad():
+            next_actions = models[0](next_states).max(1)[1].unsqueeze(1)
+            
+            next_q_values = targets[0](next_states).gather(1, next_actions).squeeze(-1)
+            
+            target_q_values = rewards + gamma * next_q_values
+        
+        
+        loss = F.mse_loss(current_q_values, target_q_values)
+        
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+        
+        total_bellman_error += loss.item()
+    
+    return total_bellman_error / q_num_steps
+
+
+def update_model_prioritized_replay(replay_buffer, models, targets, optim, gamma, action_dim, 
+                 q_batch_size, q_num_steps):
+    total_bellman_error = 0.0
+    device = next(models[0].parameters()).device
+    
+    if replay_buffer.current_size < q_batch_size:
+        return total_bellman_error
+    
+    for _ in range(q_num_steps):
+        states, actions, rewards, next_states, indices, weights = replay_buffer.sample_batch(q_batch_size)
+        states = states.to(device)
+        actions = actions.to(device)
+        rewards = rewards.to(device)
+        next_states = next_states.to(device)
+        weights = weights.to(device)
+        
+        current_q_values = models[0](states).gather(1, actions).squeeze(-1)
+        
+        with torch.no_grad():
+            next_q_values = targets[0](next_states).max(dim=1)[0]
+            
+            target_q_values = rewards + gamma * next_q_values
+        
+        td_errors = (current_q_values - target_q_values).detach()
+        
+        item_loss = (current_q_values - target_q_values).pow(2)
+        loss = (item_loss * weights).mean()
+        
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+        
+        replay_buffer.update_priorities(indices, td_errors.abs().cpu())
+        
+        total_bellman_error += loss.item()
+    
+    return total_bellman_error / q_num_steps
+
+def update_model_double_dqn_prioritized_replay(replay_buffer, models, targets, optim, gamma, action_dim, 
+                 q_batch_size, q_num_steps):
+    total_bellman_error = 0.0
+    device = next(models[0].parameters()).device
+    
+    if replay_buffer.current_size < q_batch_size:
+        return total_bellman_error
+    
+    for _ in range(q_num_steps):
+        states, actions, rewards, next_states, indices, weights = replay_buffer.sample_batch(q_batch_size)
+        states = states.to(device)
+        actions = actions.to(device)
+        rewards = rewards.to(device)
+        next_states = next_states.to(device)
+        weights = weights.to(device)
+        
+        current_q_values = models[0](states).gather(1, actions).squeeze(-1)
+        
+        with torch.no_grad():
+            next_actions = models[0](next_states).max(1)[1].unsqueeze(1)
+            
+            next_q_values = targets[0](next_states).gather(1, next_actions).squeeze(-1)
+            
+            target_q_values = rewards + gamma * next_q_values
+        
+        td_errors = (current_q_values - target_q_values).detach()
+        
+        item_loss = (current_q_values - target_q_values).pow(2)
+        loss = (item_loss * weights).mean()
+        
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+        
+        replay_buffer.update_priorities(indices, td_errors.abs().cpu())
+        
+        total_bellman_error += loss.item()
+    
     return total_bellman_error / q_num_steps
 
 def train_model_dqn(models, targets, state_dim, action_dim, envs, gamma, device, logdir, val_fn):
     train_writer = SummaryWriter(logdir / 'train')
     val_writer = SummaryWriter(logdir / 'val')
     
-    # Set up optimizer for DQN
     optim = torch.optim.Adam(models[0].parameters(), lr=0.001)
 
-    # Set up the replay buffer
+    # replay_buffer = PrioritizedReplayBuffer(replay_buffer_size, state_dim, action_dim)
     replay_buffer = ReplayBuffer(replay_buffer_size, state_dim, action_dim)
 
     # Resetting all environments to initialize the state.
