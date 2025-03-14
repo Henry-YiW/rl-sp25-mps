@@ -79,7 +79,9 @@ class PendulumEnv(gymnasium.Env):
         self.controls.append(u)
         self.total_time += 1
         self.total_time_upright += np.abs(th) < 0.1
-        metric = {'fraction_upright': self.total_time_upright / self.total_time}
+        metric = {'fraction_upright': self.total_time_upright / self.total_time,
+                  'success_count': 1 if self.total_time_upright > 0 else 0
+                  }
         return self._get_obs(), -costs, False, False, {'metric': metric}
 
     def reset(self, seed=None, options=None):

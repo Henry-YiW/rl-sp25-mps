@@ -34,7 +34,7 @@ def run(env_name, num_episodes, vis, vis_save):
     if vis:
       from gymnasium.wrappers import HumanRendering
       env = HumanRendering(env)
-    total_rewards, total_metrics = [], []
+    total_rewards, total_metrics, total_success_count = [], [], []
     state, reset_info = env.reset(seed=1)
     for i in range(num_episodes):
         reward_i = 0
@@ -58,12 +58,15 @@ def run(env_name, num_episodes, vis, vis_save):
                         save_all=True, duration=50, loop=0)
         metric_name = list(info['metric'].keys())[0]
         metric_value = info['metric'][metric_name]
+        success_count = 'Success Count'
         total_metrics += [metric_value]
+        total_success_count += [info['metric']['success_count']]
         logging.error('Final State: %7.3f, %7.3f. Episode Cost: %9.3f, %s: %7.3f.',
                       state[0], state[1], -reward_i, metric_name, metric_value)
         total_rewards += [reward_i]
     logging.error('Average Cost: %7.3f', -np.mean(total_rewards))
     logging.error('%s: %7.3f', metric_name, np.mean(total_metrics))
+    logging.error('%s: %7.3f', success_count, np.mean(total_success_count))
     env.close()
     return -np.mean(total_rewards) 
 

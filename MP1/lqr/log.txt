@@ -1,0 +1,75 @@
+sd: 0.01
+2025-02-27 23:53:19: ERROR run_classical_control.py:65] Average Cost:  31.093
+2025-02-27 23:53:19: ERROR run_classical_control.py:66] fraction_upright:   0.965
+sd: 0.02
+2025-02-27 23:53:34: ERROR run_classical_control.py:65] Average Cost:  55.991
+2025-02-27 23:53:34: ERROR run_classical_control.py:66] fraction_upright:   0.892
+sd: 0.03
+2025-02-27 23:53:43: ERROR run_classical_control.py:65] Average Cost: 229.033
+2025-02-27 23:53:43: ERROR run_classical_control.py:66] fraction_upright:   0.697
+sd: 0.04
+2025-02-27 23:53:53: ERROR run_classical_control.py:65] Average Cost: 760.757
+2025-02-27 23:53:53: ERROR run_classical_control.py:66] fraction_upright:   0.477
+sd: 0.05
+2025-02-27 23:54:09: ERROR run_classical_control.py:65] Average Cost: 1316.507
+2025-02-27 23:54:09: ERROR run_classical_control.py:66] fraction_upright:   0.331
+sd: 0.06
+2025-02-27 23:54:20: ERROR run_classical_control.py:65] Average Cost: 1861.451
+2025-02-27 23:54:20: ERROR run_classical_control.py:66] fraction_upright:   0.232
+sd: 0.07
+2025-02-27 23:54:29: ERROR run_classical_control.py:65] Average Cost: 2186.878
+2025-02-27 23:54:29: ERROR run_classical_control.py:66] fraction_upright:   0.195
+sd: 0.08
+2025-02-27 23:54:40: ERROR run_classical_control.py:65] Average Cost: 2429.285
+2025-02-27 23:54:40: ERROR run_classical_control.py:66] fraction_upright:   0.156
+sd: 0.09
+2025-02-27 23:55:28: ERROR run_classical_control.py:65] Average Cost: 2681.510
+2025-02-27 23:55:28: ERROR run_classical_control.py:66] fraction_upright:   0.132
+sd: 0.1
+2025-02-27 23:55:40: ERROR run_classical_control.py:65] Average Cost: 2887.431
+2025-02-27 23:55:40: ERROR run_classical_control.py:66] fraction_upright:   0.117
+
+
+
+
+start theta: 0
+2025-02-27 23:58:14: ERROR run_classical_control.py:65] Average Cost: 0
+2025-02-27 23:57:07: ERROR run_classical_control.py:66] fraction_upright:   1.000
+start theta: 1/10 pi
+2025-02-27 23:58:14: ERROR run_classical_control.py:65] Average Cost: 291.673
+2025-02-27 23:58:14: ERROR run_classical_control.py:66] fraction_upright:   0.881
+start theta: 2/10 pi
+2025-02-27 23:58:32: ERROR run_classical_control.py:65] Average Cost: 467.248
+2025-02-27 23:58:32: ERROR run_classical_control.py:66] fraction_upright:   0.850
+start theta: 3/10 pi
+2025-02-27 23:58:44: ERROR run_classical_control.py:65] Average Cost: 508.327
+2025-02-27 23:58:44: ERROR run_classical_control.py:66] fraction_upright:   0.843
+start theta: 4/10 pi
+2025-02-27 23:59:04: ERROR run_classical_control.py:65] Average Cost: 576.864
+2025-02-27 23:59:04: ERROR run_classical_control.py:66] fraction_upright:   0.821
+start theta: 5/10 pi
+2025-02-27 23:59:16: ERROR run_classical_control.py:65] Average Cost: 662.250
+2025-02-27 23:59:16: ERROR run_classical_control.py:66] fraction_upright:   0.800
+start theta: 6/10 pi
+2025-02-27 23:59:28: ERROR run_classical_control.py:65] Average Cost: 834.980
+2025-02-27 23:59:28: ERROR run_classical_control.py:66] fraction_upright:   0.753
+start theta: 7/10 pi
+2025-02-27 23:59:40: ERROR run_classical_control.py:65] Average Cost: 948.108
+2025-02-27 23:59:40: ERROR run_classical_control.py:66] fraction_upright:   0.716
+start theta: 8/10 pi
+2025-02-27 23:59:55: ERROR run_classical_control.py:65] Average Cost: 1094.849
+2025-02-27 23:59:55: ERROR run_classical_control.py:66] fraction_upright:   0.661
+start theta: 9/10 pi
+2025-02-28 00:00:08: ERROR run_classical_control.py:65] Average Cost: 1286.796
+2025-02-28 00:00:08: ERROR run_classical_control.py:66] fraction_upright:   0.590
+start theta: 10/10 pi
+2025-02-28 00:00:22: ERROR run_classical_control.py:65] Average Cost: 1399.932
+2025-02-28 00:00:22: ERROR run_classical_control.py:66] fraction_upright:   0.518
+
+
+
+start theta: 9/10 pi
+Success Count:   0.950
+
+start theta: 10/10 pi
+Success Count:   0.830

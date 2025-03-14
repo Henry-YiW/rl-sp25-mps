@@ -22,6 +22,7 @@ class DQNPolicy(nn.Module):
         return qvals 
   
     def act(self, x, epsilon=0.):
+        # print('x', x.shape)
         qvals = self.forward(x)
         act = torch.argmax(qvals, 1, keepdim=True)
         if epsilon > 0:

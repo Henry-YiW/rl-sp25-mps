@@ -1,6 +1,7 @@
 from tensorboardX import SummaryWriter
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 num_steps_per_rollout = 5 
 num_updates = 10000
@@ -22,9 +23,35 @@ def log(writer, iteration, name, value, print_every=10, log_every=10):
 # states, actions, rewards and new states. Also returns the state the
 # environments end up in after num_steps_per_rollout time steps.
 def collect_rollouts(model, envs, states, num_steps, device):
-    rollouts = []
-    # TODO 
-    return rollouts, states
+    # print('states', states)
+    states_tensor = torch.FloatTensor(states).to(device)
+    # Roll out num_steps_per_rollout steps
+    states_batch = []
+    actions_batch = []
+    rewards_batch = []
+    next_states_batch = []
+    for step in range(num_steps):
+        states_batch.append(states_tensor)
+        # Get action using epsilon-greedy policy
+        with torch.no_grad():
+            actions = model.act(states_tensor).cpu().numpy()
+        # print('actions', actions)
+        actions_batch.append(torch.LongTensor(actions))
+        new_states = []
+        rewards = []
+        for env, action in zip(envs, actions):
+            new_state, reward, terminated, info = env.step(action)
+            # print('new_state', new_state)
+            new_states.append(torch.FloatTensor(new_state))
+            # print('reward', reward)
+            rewards.append(torch.tensor(reward))
+            # print('terminated', terminated)
+            # print('info', info)
+        next_states_batch.append(torch.stack(new_states))
+        rewards_batch.append(torch.stack(rewards))
+        states_tensor = next_states_batch[-1]
+    
+    return (states_batch, actions_batch, rewards_batch, next_states_batch), states_tensor
         
 # Using the rollouts returned by collect_rollouts function, updates the actor
 # and critic models. You will need to:
@@ -33,10 +60,207 @@ def collect_rollouts(model, envs, states, num_steps, device):
 # 2a. Compute returns, or estimate for returns, or advantages for updating the actor.
 # 2b. Set up the appropriate loss function for actor, and optimize it.
 # Function can return actor and critic loss, for plotting.
-def update_model(model, gamma, optim, rollouts, device, iteration, writer):
-    # TODO
-    actor_loss, critic_loss = 0., 0.
-    return actor_loss, critic_loss
+# def update_model(model, gamma, optim, rollouts, device, iteration, writer):
+#     states_batch, actions_batch, rewards_batch, next_states_batch = rollouts
+#     actor_loss_total = 0.0
+#     critic_loss_total = 0.0
+    
+#     for states, actions, rewards, next_states in zip(states_batch, actions_batch, rewards_batch, next_states_batch):
+#         for state, action, reward, next_state in zip(states, actions, rewards, next_states):
+        
+#             # Convert data to tensors and move to device
+#             states_tensor = torch.FloatTensor(states).to(device)
+#             actions_tensor = torch.LongTensor(actions).to(device)
+#             rewards_tensor = torch.FloatTensor(rewards).to(device)
+#             next_states_tensor = torch.FloatTensor(next_states).to(device)
+            
+#             # Get value estimates for all states
+#             with torch.no_grad():
+#                 _, values = model(states_tensor)
+#                 values = values.squeeze(-1)
+                
+#                 # Get the final value estimate for bootstrapping
+#                 _, final_value = model(torch.FloatTensor([next_states[-1]]).to(device))
+#                 final_value = final_value.item()
+            
+#             # Compute returns and advantages
+#             returns = []
+            
+#             # Calculate the returns (discounted sum of rewards)
+#             R = final_value
+#             for r in reversed(rewards):
+#                 R = r + gamma * R
+#                 returns.insert(0, R)
+#             returns_tensor = torch.FloatTensor(returns).to(device).unsqueeze(1)
+            
+#             # Compute advantages (returns - values)
+#             advantages_tensor = returns_tensor - values.unsqueeze(1)
+            
+#             # Forward pass through the model for all states
+#             actor_logits, critic_values = model(states_tensor)
+            
+#             # Create the action distribution
+#             action_dist = model.actor_to_distribution(actor_logits)
+            
+#             # Compute the log probabilities of the taken actions
+#             log_probs = action_dist.log_prob(actions_tensor)
+            
+#             # Compute the actor loss (policy gradient loss)
+#             # We want to maximize expected return, so we negate the loss
+#             actor_loss = -(log_probs * advantages_tensor.detach()).mean()
+            
+#             # Compute the critic loss (MSE between predicted values and returns)
+#             critic_loss = F.mse_loss(critic_values, returns_tensor)
+            
+#             # Compute the total loss
+#             total_loss = actor_loss + 0.5 * critic_loss
+            
+#             # Backward pass and optimization
+#             optim.zero_grad()
+#             total_loss.backward()
+#             optim.step()
+            
+#             # Accumulate the losses
+#             actor_loss_total += actor_loss.item()
+#             critic_loss_total += critic_loss.item()
+    
+#     # Return the average losses
+#     return actor_loss_total / len(rollouts), critic_loss_total / len(rollouts)
+
+def update_model_qvalue_ac(model, gamma, optim, rollouts, device, iteration, writer):
+    states_batch, actions_batch, rewards_batch, next_states_batch = rollouts
+    
+    # Prepare data
+    num_envs = states_batch[0].size(0)
+    num_steps = len(states_batch)
+    
+    # Forward pass through all states to get current values
+    all_states = torch.cat(states_batch)
+    all_actions = torch.cat(actions_batch)
+    all_logits, all_values = model(all_states)
+    all_values = all_values.squeeze(-1).view(num_steps, num_envs)
+    
+    # Compute TD targets and errors in one pass
+    td_targets = []
+    td_errors = []
+    
+    # Get the next state value for the final state (for bootstrapping)
+    with torch.no_grad():
+        _, final_next_values = model(next_states_batch[-1])
+        final_next_values = final_next_values.squeeze(-1)
+    
+    for t in range(num_steps):
+        # Get next state value for bootstrapping
+        with torch.no_grad():
+            if t == num_steps - 1:
+                next_values = final_next_values
+            else:
+                # Get values for the next state
+                with torch.no_grad():
+                    _, next_state_values = model(states_batch[t+1])
+                    next_values = next_state_values.squeeze(-1)
+        
+        # Compute TD target: r + γV(s')
+        target = rewards_batch[t] + gamma * next_values.detach()
+        td_targets.append(target)
+        
+        # Compute TD error: (r + γV(s')) - V(s)
+        td_error = target - all_values[t]
+        td_errors.append(td_error)
+    
+    # Stack into tensors [num_steps, num_envs]
+    td_targets_tensor = torch.stack(td_targets)
+    td_errors_tensor = torch.stack(td_errors)
+    
+    # Create action distribution
+    action_dist = model.actor_to_distribution(all_logits)
+    
+    # Compute the log probabilities of the taken actions
+    log_probs = action_dist.log_prob(all_actions)
+    log_probs = log_probs.view(num_steps, num_envs)
+    
+    # Key difference: Use TD errors directly for policy updates
+    # This is the Q-value Actor-Critic approach (no additional baseline subtraction)
+    actor_loss = -(log_probs * td_errors_tensor.detach()).mean()
+    
+    # The critic is trained to minimize TD error
+    critic_loss = F.mse_loss(all_values, td_targets_tensor.detach())
+    
+    # Compute the total loss
+    total_loss = actor_loss + 0.5 * critic_loss
+    
+    # Backward pass and optimization
+    optim.zero_grad()
+    total_loss.backward()
+    optim.step()
+    
+    return actor_loss.item(), critic_loss.item()
+
+
+# Advantage Actor-Critic (with state-dependent baseline) using TD error
+def update_model_advantage_ac(model, gamma, optim, rollouts, device, iteration, writer):
+    states_batch, actions_batch, rewards_batch, next_states_batch = rollouts
+    
+    # Prepare data
+    num_envs = states_batch[0].size(0)
+    num_steps = len(states_batch)
+    
+    # Forward pass through all states to get current values
+    all_states = torch.cat(states_batch)
+    all_actions = torch.cat(actions_batch)
+    all_logits, all_values = model(all_states)
+    all_values = all_values.squeeze(-1).view(num_steps, num_envs)
+    
+    # Compute TD targets and errors in one pass
+    td_targets = []
+    advantages = []
+    
+    # Get the next state value for the final state (for bootstrapping)
+    with torch.no_grad():
+        _, final_next_values = model(next_states_batch[-1])
+        final_next_values = final_next_values.squeeze(-1)
+    
+    for t in range(num_steps):
+        # Get next state value for bootstrapping
+        with torch.no_grad():
+            if t == num_steps - 1:
+                next_values = final_next_values
+            else:
+                next_values = all_values[t+1]
+        
+        # Compute TD target: r + γV(s')
+        target = rewards_batch[t] + gamma * next_values.detach()
+        td_targets.append(target)
+        
+        # Compute advantages as TD error: (r + γV(s')) - V(s)
+        # For A2C, TD error = Q(s,a) - V(s) = Advantage
+        advantage = target - all_values[t]
+        advantages.append(advantage)
+    
+    # Stack into tensors [num_steps, num_envs]
+    td_targets_tensor = torch.stack(td_targets)
+    advantages_tensor = torch.stack(advantages)
+    
+    # Create action distribution and get log probabilities of taken actions
+    action_dist = model.actor_to_distribution(all_logits)
+    log_probs = action_dist.log_prob(all_actions)
+    log_probs = log_probs.view(num_steps, num_envs)
+    
+    # Use advantages for the policy gradient
+    actor_loss = -(log_probs * advantages_tensor.detach()).mean()
+    
+    # The critic is trained to minimize TD error
+    critic_loss = F.mse_loss(all_values, td_targets_tensor.detach())
+    
+    # Compute the total loss
+    total_loss = actor_loss + 0.5 * critic_loss
+    
+    # Backward pass and optimization
+    optim.zero_grad()
+    total_loss.backward()
+    optim.step()
+    
+    return actor_loss.item(), critic_loss.item()
 
 
 def train_model_ac(model, envs, gamma, device, logdir, val_fn):
@@ -44,9 +268,8 @@ def train_model_ac(model, envs, gamma, device, logdir, val_fn):
     train_writer = SummaryWriter(logdir / 'train')
     val_writer = SummaryWriter(logdir / 'val')
     
-    # You may want to setup an optimizer, loss functions for training.
-    optim = None
-    # TODO
+    # Setup optimizer for the model
+    optim = torch.optim.Adam(model.parameters(), lr=0.001)
     
     # Resetting all environments to initialize the state.
     num_steps, total_samples = 0, 0
@@ -62,15 +285,13 @@ def train_model_ac(model, envs, gamma, device, logdir, val_fn):
         num_steps += num_steps_per_rollout
         total_samples += num_steps_per_rollout*len(envs)
 
-
         # Use rollouts to update the policy and take gradient steps.
-        actor_loss, critic_loss = update_model(model, gamma, optim, rollouts, 
+        actor_loss, critic_loss = update_model_qvalue_ac(model, gamma, optim, rollouts, 
                                                device, updates_i, train_writer)
         log(train_writer, updates_i, 'train-samples', total_samples, 100, 10)
         log(train_writer, updates_i, 'train-actor_loss', actor_loss, 100, 10)
         log(train_writer, updates_i, 'train-critic_loss', critic_loss, 100, 10)
         log(train_writer, updates_i, None, None, 100, 10)
-
 
         # We are solving a continuing MDP which never returns a done signal. We
         # are going to manully reset the environment every few time steps. To
