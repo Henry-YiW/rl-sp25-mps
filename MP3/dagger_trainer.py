@@ -31,19 +31,15 @@ def dagger_trainer(env,learner,query_expert,device):
                 obs_list.append(obs.clone().detach().cpu())
                 # get state from environment
                 state = torch.tensor(env.unwrapped.state).float().to(device)
-                print('state shape', state.shape)
                 # query expert for action
                 action = query_expert(state).item()
                 actions_list.append(action)
-                print('expert action: ', action)
 
                 with torch.no_grad():
                     action = action if iteration == 0 else learner.act(obs).item()
                 
                 # take step with expert action
                 obs,reward,done,_,info = env.step(action)
-                print('next state: ', env.unwrapped.state)
-                print('image shape: ', obs.shape)
                 steps += 1
 
             print(f"Episode {episode+1} of {num_episodes_per_iter}")
