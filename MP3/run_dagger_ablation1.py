@@ -52,7 +52,7 @@ def main(_):
         return expert.predict(state.cpu().numpy(),deterministic=True)[0]
 
     # Load dagger implementation
-    from dagger_trainer import dagger_trainer
+    from dagger_trainer_ablation1 import dagger_trainer
     dagger_trainer(env,learner,query_expert,device)
         
     # Evaluation
@@ -69,7 +69,7 @@ def main(_):
         if FLAGS.vis_save:  
             import pathlib
             pathlib.Path(logdir).mkdir(parents=True, exist_ok=True)
-            gif[0].save(fp=f'{logdir}/vis-{env_vis.unwrapped.spec.id}-dagger.gif',
+            gif[0].save(fp=f'{logdir}/vis-{env_vis.unwrapped.spec.id}-dagger-ablation750.gif',
                         format='GIF', append_images=gif,
                         save_all=True, duration=50, loop=0)
         env_vis.close()

@@ -13,10 +13,10 @@ def dagger_trainer(env,learner,query_expert,device):
     lr=1e-4
     discrete = True
     iterations = 10
-    num_episodes_per_iter = 8
+    num_episodes_per_iter = 2
     max_steps = 200
     epochs=20
-    max_dataset_size = 1500
+    max_dataset_size = 375
 
     learner.to(device)
 
@@ -102,7 +102,7 @@ def dagger_trainer(env,learner,query_expert,device):
             print(f"Epoch [{epoch+1}/{epochs}], Loss: {avg_loss:.4f}, Training Steps: {training_steps}")
 
         learner.eval()
-        num_episodes_per_iter = 5 
+        num_episodes_per_iter = 1
         print(f"Iteration {iteration+1} of {iterations}, Expert-Labeled Steps: {len(actions_buffer)}")
         beta = 0.6**(iteration + 1)
         # Evaluation
